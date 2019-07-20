@@ -3,6 +3,7 @@ from flask import request
 import simplejson as json
 import os.path
 from flask_cors import CORS
+from evotepy import Litenode
 import time
 
 app = Flask(__name__)
@@ -279,6 +280,7 @@ def get_kits():
         kits.append(sv["Kit"])
 
     return format_resp(kits, 1)
+
 
 
 ##Fingerprint Detect
