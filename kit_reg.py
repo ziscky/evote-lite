@@ -134,6 +134,7 @@ def get_voters():
 @app.route('/voter/check', methods=['POST'])
 def get_voter():
     fprint = request.form.get('fprint')
+    idNo = request.form.get('idNo')
 
     keys = node.SeedKeys(fprint, True)
     print(keys)
