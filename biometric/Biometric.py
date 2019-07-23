@@ -76,5 +76,5 @@ class Biometric:
         # Downloads the characteristics of template loaded in charbuffer 1
         characterics = str(self.f.downloadCharacteristics(0x01)).encode('utf-8')
         # Hashes characteristics of template
-        fprint_hash = hashlib.sha256(characterics).hexdigest()
+        fprint_hash = hashlib.sha256(str(positionNumber)).hexdigest()
         return fprint_hash
