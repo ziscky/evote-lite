@@ -6,4 +6,5 @@ class Bio:
         return
 
     def requestFPrint(self):
-        return subprocess.check_output(["python2",self.workdir+"/fprint.py"])
+        hash = subprocess.check_output(["python2",self.workdir+"/fprint.py"]).decode("utf-8")
+        return hash.strip('\n')
