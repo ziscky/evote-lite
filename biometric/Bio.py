@@ -6,5 +6,4 @@ class Bio:
         return
 
     def requestFPrint(self):
-        subprocess.check_output(["python2",self.workdir+"/fprint.py"])
-        pass
+        return subprocess.check_output(["python2",self.workdir+"/fprint.py"])
