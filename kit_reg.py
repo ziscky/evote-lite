@@ -136,7 +136,7 @@ def get_voter():
     fprint = request.form.get('fprint')
     idNo = request.form.get('idNo')
 
-    keys = node.SeedKeys(fprint, True)
+    keys = node.SeedKeys(idNo, True)
     print(keys)
     parsed_keys = json.loads(keys)
     print(parsed_keys)
