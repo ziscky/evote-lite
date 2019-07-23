@@ -3,6 +3,7 @@ from flask import request
 import simplejson as json
 import os.path
 from flask_cors import CORS
+from biometric.Bio import Bio
 from evotepy import Litenode, Identity
 import time
 
@@ -28,8 +29,10 @@ def format_resp(data, success):
 ##Fingerprint Detect
 @app.route('/fingerprint/detect', methods=['POST'])
 def get_fingerprint():
-    ##TODO: read fingerprint from sensor
-    return format_resp("FPRINTHASH", 1)
+    hash = fprintHelper.requestFPrint()
+    if hash == "ERROR":
+        return format_resp("Error. Try Again", 0)
+    return format_resp(hash, 1)
 
 
 @app.route('/voter/check', methods=['POST'])
@@ -92,13 +95,13 @@ def get_voter():
     return format_resp(resp, 1)
 
 
-
+fprintHelper = Bio(workdir)
 node = Litenode(workdir + dht_config, workdir + id)
 node.AddKnownNodes(workdir + nodes)
 node.Start(False)
 # demo()
 
 # cache genesis block
-node.GetBlock(0, "PARENT",False)
+node.GetBlock(0, "PARENT", False)
 
-app.run(port=7779,host="0.0.0.0")
+app.run(port=7779, host="0.0.0.0")

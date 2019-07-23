@@ -5,6 +5,7 @@ import os.path
 import requests
 from flask_cors import CORS
 from evotepy import Litenode, Identity
+from biometric.Bio import Bio
 import time
 
 app = Flask(__name__)
@@ -30,8 +31,10 @@ def format_resp(data, success):
 ##Fingerprint Detect
 @app.route('/fingerprint/detect', methods=['POST'])
 def get_fingerprint():
-    ##TODO: read fingerprint from sensor
-    return format_resp("FPRINTHASH", 1)
+    hash = fprintHelper.requestFPrint()
+    if hash == "ERROR":
+        return format_resp("Error. Try Again",0)
+    return format_resp(hash, 1)
 
 
 @app.route('/svlogin', methods=['POST'])
@@ -186,10 +189,12 @@ def demob():
     node.GetBlock(0, "PARENT")
 
 
+fprintHelper = Bio(workdir)
 node = Litenode(workdir + dht_config, workdir + id)
 node.AddKnownNodes(workdir + nodes)
 node.Start(False)
 # demo()
+
 
 # cache genesis block
 node.GetBlock(0, "PARENT",False)

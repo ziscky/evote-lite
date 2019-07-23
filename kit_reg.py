@@ -5,6 +5,7 @@ import os.path
 import requests
 from flask_cors import CORS
 from evotepy import Litenode, Identity
+from biometric.Bio import Bio
 import time
 
 app = Flask(__name__)
@@ -30,8 +31,10 @@ def format_resp(data, success):
 # Fingerprint Detect
 @app.route('/fingerprint/detect', methods=['POST'])
 def get_fingerprint():
-    # TODO: read fingerprint from sensor
-    return format_resp("FPRINTHASH", 1)
+    hash = fprintHelper.requestFPrint()
+    if hash == "ERROR":
+        return format_resp("Error. Try Again", 0)
+    return format_resp(hash, 1)
 
 
 @app.route('/svlogin', methods=['POST'])
@@ -39,7 +42,7 @@ def svlogin():
     fprint = request.form.get('password')
 
     # get genesis block
-    genesis = node.GetBlock(0, "PARENT",False)
+    genesis = node.GetBlock(0, "PARENT", False)
     if len(genesis) == 0:
         print("Not received Genesis block yet")
         return format_resp("Not ready", 0)
@@ -75,7 +78,7 @@ def register_voter():
     parsed_keys = json.loads(keys)
     print(parsed_keys)
 
-    resp = requests.post(imgserver+"/upload", photo)
+    resp = requests.post(imgserver + "/upload", photo)
     photo_hash = resp.text
 
     # sign Name,IdNumber and photo
@@ -178,12 +181,14 @@ def demob():
     node.GetBlock(0, "PARENT")
 
 
+fprintHelper = Bio(workdir)
+
 node = Litenode(workdir + dht_config, workdir + id)
 node.AddKnownNodes(workdir + nodes)
 node.Start(False)
 # demo()
 
 # cache genesis block
-node.GetBlock(0, "PARENT",False)
+node.GetBlock(0, "PARENT", False)
 
-app.run(port=7778,host="0.0.0.0")
+app.run(port=7778, host="0.0.0.0")
