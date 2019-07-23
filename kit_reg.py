@@ -73,7 +73,7 @@ def register_voter():
     photo = request.form.get('file')
 
     # derive keys from fprint
-    keys = node.SeedKeys(fprint, True)
+    keys = node.SeedKeys(idNo, True)
     print(keys)
     parsed_keys = json.loads(keys)
     print(parsed_keys)
