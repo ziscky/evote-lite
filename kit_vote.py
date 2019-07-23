@@ -37,33 +37,6 @@ def get_fingerprint():
     return format_resp(hash, 1)
 
 
-@app.route('/svlogin', methods=['POST'])
-def svlogin():
-    fprint = request.form.get('password')
-
-    # get genesis block
-    genesis = node.GetBlock(0, "PARENT")
-    if len(genesis) == 0:
-        print("Not received Genesis block yet")
-        return format_resp("Not ready", 0)
-
-    parsed_genesis = json.loads(genesis)
-    tx_hash = parsed_genesis["tx_hashes"][0]
-
-    print(tx_hash)
-
-    transaction = parsed_genesis["transactions"][tx_hash]
-    parsed_transaction = json.loads(transaction)
-
-    supervisors = json.loads(parsed_transaction["data"])["Supervisors"]
-    print(supervisors)
-    # supervisors = parsed_transaction["Supervisors"]
-    for supervisor in supervisors:
-        if supervisor["Fingerprint"] == fprint:
-            return format_resp("Success", 1)
-    return format_resp("Invalid Credentials", 0)
-
-
 @app.route('/voter/check', methods=['POST'])
 def get_voter():
     fprint = request.form.get('fprint')

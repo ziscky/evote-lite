@@ -132,29 +132,122 @@ def get_voters():
 
 
 @app.route('/voter/check', methods=['POST'])
-def check_voter():
-    name = request.form.get('fPrint')
+def get_voter():
+    fprint = request.form.get('fprint')
 
-    ##TODO: REQUEST FOR TRANSACTION IN BX OR MEMQUEUE
-    transactions = node.GetTransactions()
+    keys = node.SeedKeys(fprint, True)
+    print(keys)
+    parsed_keys = json.loads(keys)
+    print(parsed_keys)
+    identity = Identity(parsed_keys["public_key"], parsed_keys["private_key"], parsed_keys["e_public_key"],
+                        parsed_keys["e_private_key"])
 
+    transactions = node.GetTransaction(identity.DSAPublicKey(), "PARENT")
+
+    if transactions == "":
+        return format_resp("Waiting for block chain confirmation", -1)
+
+    print("119-->", transactions)
     parsed_transactions = json.loads(transactions)
     voters = []
-    for transaction in parsed_transactions["transactions"]:
-        tx = json.loads(transaction)
-        data = tx["data"]
-        print(json.loads(data.replace("\'", "\"")))
-        data = json.loads(data.replace("\'", "\""))
-        parsed = {
-            "fName": data["Name"],
-            "idNo": data["IdNumber"],
-            "gender": data["Gender"],
-            "photo": data["photo"]
-        }
-        print(parsed)
-        voters.append(parsed)
+    data = parsed_transactions["transaction"]
+    if data == "ERROR":
+        return format_resp("Not registered on block chain", -2)
+
+    data = json.loads(parsed_transactions["transaction"])
+    print(data)
+    parsed = {
+        "fName": data["Name"],
+        "idNo": data["IdNumber"],
+        "gender": data["Gender"],
+        "photo": data["photo"]
+    }
+    print(parsed)
+    voters.append(parsed)
 
     return format_resp(voters, 1)
+
+
+@app.route('/election/get', methods=['POST'])
+def get_election():
+    # get genesis block
+    genesis = node.GetBlock(0, "PARENT",False)
+    if len(genesis) == 0:
+        print("Not received Genesis block yet")
+        return format_resp("Not ready", 0)
+
+    parsed_genesis = json.loads(genesis)
+    tx_hash = parsed_genesis["tx_hashes"][0]
+
+    print(tx_hash)
+
+    transaction = parsed_genesis["transactions"][tx_hash]
+    parsed_transaction = json.loads(transaction)
+
+    posts = json.loads(parsed_transaction["data"])["Posts"]
+    print(posts)
+
+    for post in posts:
+        i = 0
+        for candidate in post["Candidates"]:
+            candidate["Id"] = i
+            tmp = candidate["Photo"]
+            resp = requests.get(imgserver+"/img/"+tmp)
+            candidate["Photo"] = resp.text
+            i += 1
+    print(posts)
+    return format_resp(posts, 1)
+
+
+@app.route('/voter/vote', methods=['POST'])
+def cast_vote():
+    vote = request.form.get('vote')
+    fprint = request.form.get('fprint')
+
+    print(vote)
+    print(fprint)
+    parsed_vote = json.loads(vote)
+
+    choices = []
+    for choice in parsed_vote:
+        data = {
+            "Name": choice["Name"],
+            "Party": choice["Party"],
+            "Post": choice["Post"]
+        }
+        choices.append(data)
+
+    # derive keys from fprint
+    keys = node.SeedKeys(fprint, True)
+    print(keys)
+    parsed_keys = json.loads(keys)
+    print(parsed_keys)
+
+    # sign Name,IdNumber and photo
+    identity = Identity(parsed_keys["public_key"], parsed_keys["private_key"], parsed_keys["e_public_key"],
+                        parsed_keys["e_private_key"])
+
+    #create transaction and broadcast to block chain
+    signature = identity.Sign(json.dumps(choices))
+
+    print(signature)
+
+    payload = {
+        "data": json.dumps(choices),
+        "timestamp": time.time(),
+        "pk": identity.DSAPublicKey(),
+        "signature": signature
+    }
+
+    node.BroadcastTransaction(json.dumps(payload))
+
+    return format_resp("success", 1)
+
+
+@app.route('/close/vote', methods=['GET'])
+def close_chain():
+    node.CloseChain()
+    return format_resp("success", 1)
 
 
 @app.route('/fork/vote', methods=['GET'])
@@ -189,6 +282,6 @@ node.Start(False)
 # demo()
 
 # cache genesis block
-node.GetBlock(0, "PARENT", False)
+# node.GetBlock(0, "PARENT", False)
 
 app.run(port=7778, host="0.0.0.0")
