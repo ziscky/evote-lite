@@ -203,6 +203,7 @@ def get_election():
 def cast_vote():
     vote = request.form.get('vote')
     fprint = request.form.get('fprint')
+    idNo = request.form.get('idNo')
 
     print(vote)
     print(fprint)
@@ -218,7 +219,7 @@ def cast_vote():
         choices.append(data)
 
     # derive keys from fprint
-    keys = node.SeedKeys(fprint, True)
+    keys = node.SeedKeys(idNo, True)
     print(keys)
     parsed_keys = json.loads(keys)
     print(parsed_keys)
