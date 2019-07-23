@@ -5,12 +5,13 @@ import os.path
 from flask_cors import CORS
 from evotepy import Litenode
 import time
+import requests
 
 app = Flask(__name__)
 CORS(app)
 
-
-workdir  = os.path.dirname(os.path.realpath(__file__))+"/"
+workdir = os.path.dirname(os.path.realpath(__file__)) + "/"
+imgserver = "http://localhost:9000/upload"
 
 
 def format_resp(data, success):
@@ -22,19 +23,20 @@ def format_resp(data, success):
 
 
 def valid_key(pubkey):
-    return os.path.isfile(workdir+pubkey)
+    return os.path.isfile(workdir + pubkey)
 
 
 def save(pubkey, data):
-    with open(workdir+pubkey, "w+") as dataf:
-        dataf.write(json.dumps(data,indent=4*' '))
+    with open(workdir + pubkey, "w+") as dataf:
+        dataf.write(json.dumps(data, indent=4 * ' '))
         return
     print("ERROR SAVING FILE")
 
 
 def load(pubkey):
-    with open(workdir+pubkey, "r") as dataf:
+    with open(workdir + pubkey, "r") as dataf:
         data = dataf.read()
+        # print("HERE",data)
         return data
     pass
 
@@ -46,7 +48,7 @@ def seed():
     pub = "pubkey"
     priv = "privkey"
     try:
-        storage = open(workdir+pub, "x")
+        storage = open(workdir + pub, "x")
         storage.close()
     except:
         pass
@@ -60,11 +62,10 @@ def login():
 
     # seed pub/priv key
     pub = "pubkey"
-    storage = open(workdir+pub, "w+")
+    storage = open(workdir + pub, "w+")
     storage.close()
 
     return format_resp(pub, 1)
-
 
 
 ##Election routes
@@ -80,17 +81,35 @@ def create_election():
         "ID": 1,
         "ElectionName": name,
         "Created": time.time(),
-        "Posts":[],
-        "Supervisors":[]
+        "Posts": [],
+        "Supervisors": []
     }
 
     save(uid, data)
     return format_resp("success", 1)
 
 
+# Election routes
+@app.route('/election/deploy', methods=['POST'])
+def deploy_election():
+    uid = request.form.get('uid')
+
+    if not valid_key(uid):
+        return format_resp("success", -1)
+
+    data = load(uid)
+    parsed = json.loads(data)
+
+    r = requests.post("http://localhost:7778/init", data=json.dumps(parsed))
+    if r.status_code != 200:
+        return format_resp(json.dumps(parsed), 0)
+    return format_resp("success", 1)
+
+
 @app.route('/election/get', methods=['POST'])
 def get_elections():
     uid = request.form.get('uid')
+    print(uid)
     if not valid_key(uid):
         return format_resp("success", -1)
 
@@ -123,7 +142,7 @@ def create_post():
     }
 
     parsed["Posts"].append(app)
-    save(uid,parsed)
+    save(uid, parsed)
 
     return format_resp("success", 1)
 
@@ -155,6 +174,9 @@ def create_candidate():
     if not valid_key(uid):
         return format_resp("success", -1)
 
+    resp = requests.post(imgserver, photo)
+    photo_hash = resp.text
+
     data = load(uid)
     parsed = json.loads(data)
     app = {
@@ -162,14 +184,14 @@ def create_candidate():
         "Gender": gender,
         "Party": party,
         "Slogan": slogan,
-        "Photo": photo,
+        "Photo": photo_hash,
     }
     for p in parsed["Posts"]:
         if p["Name"] == post:
             print(p)
             p["Candidates"].append(app)
 
-    save(uid,parsed)
+    save(uid, parsed)
 
     return format_resp("success", 1)
 
@@ -214,11 +236,11 @@ def create_supervisor():
         "Email": email,
         "PhoneNumber": phoneNumber,
         "Fingerprint": fprint,
-        "Kit":{},
+        "Kit": {},
     }
 
     parsed["Supervisors"].append(app)
-    save(uid,parsed)
+    save(uid, parsed)
 
     return format_resp("success", 1)
 
@@ -260,7 +282,7 @@ def create_kits():
         if sv["FName"] == supervisor:
             sv["Kit"] = app
 
-    save(uid,parsed)
+    save(uid, parsed)
 
     return format_resp("success", 1)
 
@@ -282,6 +304,13 @@ def get_kits():
     return format_resp(kits, 1)
 
 
+@app.route('/demou', methods=['POST'])
+def uploadd():
+    photo = request.form.get("photo")
+    # upload photo to img server
+    resp = requests.post(imgserver, photo)
+    print(resp.text)
+
 
 ##Fingerprint Detect
 @app.route('/fingerprint/detect', methods=['POST'])
@@ -290,4 +319,4 @@ def get_fingerprint():
     return format_resp("FPRINTHASH", 1)
 
 
-app.run(port=7777)
+app.run(port=7777,host="0.0.0.0")

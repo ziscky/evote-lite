@@ -2,6 +2,7 @@ from flask import Flask
 from flask import request
 import simplejson as json
 import os.path
+import requests
 from flask_cors import CORS
 from evotepy import Litenode, Identity
 import time
@@ -10,6 +11,7 @@ app = Flask(__name__)
 CORS(app)
 
 workdir = os.path.dirname(os.path.realpath(__file__)) + "/"
+imgserver = "http://localhost:9000"
 dht_config = "conf3.json"
 id = "id3.json"
 nodes = "nodes.json"
@@ -25,10 +27,10 @@ def format_resp(data, success):
     return json.dumps(obj)
 
 
-##Fingerprint Detect
+# Fingerprint Detect
 @app.route('/fingerprint/detect', methods=['POST'])
 def get_fingerprint():
-    ##TODO: read fingerprint from sensor
+    # TODO: read fingerprint from sensor
     return format_resp("FPRINTHASH", 1)
 
 
@@ -37,7 +39,7 @@ def svlogin():
     fprint = request.form.get('password')
 
     # get genesis block
-    genesis = node.GetBlock(0, "PARENT")
+    genesis = node.GetBlock(0, "PARENT",False)
     if len(genesis) == 0:
         print("Not received Genesis block yet")
         return format_resp("Not ready", 0)
@@ -73,6 +75,9 @@ def register_voter():
     parsed_keys = json.loads(keys)
     print(parsed_keys)
 
+    resp = requests.post(imgserver+"/upload", photo)
+    photo_hash = resp.text
+
     # sign Name,IdNumber and photo
     identity = Identity(parsed_keys["public_key"], parsed_keys["private_key"], parsed_keys["e_public_key"],
                         parsed_keys["e_private_key"])
@@ -81,9 +86,9 @@ def register_voter():
         "Name": name,
         "IdNumber": idNo,
         "Gender": gender,
-        "photo": photo,
+        "photo": photo_hash,
     }
-    ##create transaction and broadcast to block chain
+    # create transaction and broadcast to block chain
     signature = identity.Sign(json.dumps(data))
 
     print(signature)
@@ -155,17 +160,16 @@ def fork():
     return format_resp("success", 1)
 
 
-@app.route('/demo', methods=['GET'])
+@app.route('/init', methods=['POST'])
 def demo():
     # demo
-    f = open(workdir + "pubkey")
-    tmp = json.load(f)
-
+    print("INIT>>>>>", request.get_data())
     data = {
         "timestamp": time.time(),
-        "data": json.dumps(tmp)
+        "data": request.get_data()
     }
     node.InitChain(json.dumps(data))
+    return format_resp("success", 1)
 
 
 @app.route('/demob', methods=['GET'])
@@ -176,10 +180,10 @@ def demob():
 
 node = Litenode(workdir + dht_config, workdir + id)
 node.AddKnownNodes(workdir + nodes)
-node.Start()
+node.Start(False)
 # demo()
 
 # cache genesis block
-node.GetBlock(0, "PARENT")
+node.GetBlock(0, "PARENT",False)
 
-app.run(port=7777)
+app.run(port=7778,host="0.0.0.0")
