@@ -4,6 +4,7 @@ import simplejson as json
 import os.path
 from flask_cors import CORS
 from evotepy import Litenode
+from biometric.Bio import Bio
 import time
 import requests
 
@@ -315,8 +316,11 @@ def uploadd():
 ##Fingerprint Detect
 @app.route('/fingerprint/detect', methods=['POST'])
 def get_fingerprint():
-    ##TODO: read fingerprint from sensor
-    return format_resp("FPRINTHASH", 1)
+    hash = fprintHelper.requestFPrint()
+    if hash == "ERROR":
+        return format_resp("Error. Try Again", 0)
+    return format_resp(hash, 1)
 
+fprintHelper = Bio(workdir)
 
 app.run(port=7777,host="0.0.0.0")
