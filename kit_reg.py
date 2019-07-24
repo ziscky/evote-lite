@@ -40,6 +40,7 @@ def get_fingerprint():
 @app.route('/svlogin', methods=['POST'])
 def svlogin():
     fprint = request.form.get('password')
+    idNo = request.form.get('idNo')
 
     # get genesis block
     genesis = node.GetBlock(0, "PARENT", False)
@@ -59,7 +60,7 @@ def svlogin():
     print(supervisors)
     # supervisors = parsed_transaction["Supervisors"]
     for supervisor in supervisors:
-        if supervisor["Fingerprint"] == fprint:
+        if supervisor["IDNO"] == idNo:
             return format_resp("Success", 1)
     return format_resp("Invalid Credentials", 0)
 
@@ -280,7 +281,7 @@ fprintHelper = Bio(workdir)
 
 node = Litenode(workdir + dht_config, workdir + id)
 node.AddKnownNodes(workdir + nodes)
-node.Start(False)
+# node.Start(False)
 # demo()
 
 # cache genesis block

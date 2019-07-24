@@ -225,6 +225,7 @@ def create_supervisor():
     email = request.form.get('email')
     phoneNumber = request.form.get('phoneNumber')
     fprint = request.form.get('fprint')
+    idNo = request.form.get('idNo')
 
     if not valid_key(uid):
         return format_resp("success", -1)
@@ -237,6 +238,7 @@ def create_supervisor():
         "Email": email,
         "PhoneNumber": phoneNumber,
         "Fingerprint": fprint,
+        "IDNO": idNo,
         "Kit": {},
     }
 
